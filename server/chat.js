@@ -4,16 +4,23 @@ import { MemoryVectorStore } from "@langchain/classic/vectorstores/memory";
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // change default filePath to any file path
-const chat = async (filePath = "./uploads/hbs-lean-startup.pdf", query) => {
+const chat = async (filePath = path.join(__dirname, "uploads/hbs-lean-startup.pdf"), query) => {
     // Get API key
     const apiKey = process.env.OPENAI_API_KEY;
+
+    console.log("📄 Loading PDF from:", filePath);
+    console.log("❓ Question:", query);
 
     // Step 1: load data
     const loader = new PDFLoader(filePath);
     const data = await loader.load();
+    console.log("✅ PDF loaded with", data.length, "pages/documents");
 
     // Step 2: split data
     const textSplitter = new RecursiveCharacterTextSplitter({
@@ -55,9 +62,11 @@ Helpful Answer:`;
     // use retriever to get relevant documents
     const retriever = vectorStore.asRetriever();
     const relevantDocs = await retriever.invoke(query);
+    console.log("🔍 Retrieved", relevantDocs.length, "relevant documents");
+    console.log("📝 Context length:", relevantDocs.map((doc) => doc.pageContent).join("\n\n").length, "characters");
 
     // Format context from retrieved documents
-    const context = relevantDocs.map((doc) => doc.pageConent).join("\n\n");
+    const context = relevantDocs.map((doc) => doc.pageContent).join("\n\n");
 
     // Create a simple chain using the prompt template
     const formattedPrompt = await prompt.format({
